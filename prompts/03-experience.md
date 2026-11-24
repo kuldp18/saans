@@ -1,0 +1,3 @@
+# 03 — Build the household and community journeys
+
+Read docs/01–04 and follow the wireframe. Implement the validated Planner form, city data states, results cards with evidence, conditional indoor actions and lower-emission alternatives. Show what each action changes and the comparison limits. Fixed tasks stay fixed, stale data cannot suggest specific times, and missing equipment cannot appear as a requirement. Implement copy and download of a public-data-only community notice with labeled sample data where relevant. Give errors clear focus and make status updates accessible. Write a Playwright journey that starts at Today and finishes with one impact comparison, and another that finishes with a source-stamped notice. Exercise the layouts at 320, 390 and 1280 px.

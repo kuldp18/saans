@@ -1,0 +1,3 @@
+# 01 — Scaffold and design system
+
+Implement only the foundation in PLAN.md. Use a single Next.js App Router app with strict TypeScript, Tailwind, current supported dependencies, a pinned Node LTS and a lockfile. Add ESLint, npm scripts, Vitest, Playwright and a CI check. Establish shared semantic form/card/status controls and routes Today, Planner and Sources, using docs/02-ui-screens.md and design/screen-preview.html. Set up the sample discovery path and screen shell; do not render fake live data. Include skip link, focus states, reduced motion, keyboard navigation and 320px reflow. Provide .env.example without secrets. Run install, check and build and show actual results. Do not add auth, a database or unrelated UI.

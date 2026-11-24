@@ -1,0 +1,130 @@
+@import "tailwindcss";
+
+@theme {
+  --color-canvas: #f8f7f2;
+  --color-ink: #132c2b;
+  --color-brand: #14564c;
+  --color-muted: #4b6261;
+  --color-mint: #e4f1ec;
+  --color-line: #ccd9d3;
+  --color-control: #637b76;
+}
+
+@layer base {
+  body {
+    @apply bg-canvas font-sans text-lg leading-relaxed text-ink;
+  }
+
+  h1, h2, legend { @apply font-bold leading-tight; }
+  h1 { font-size: clamp(2rem, 5vw, 2.75rem); margin-bottom: 1rem; letter-spacing: -.04em; }
+  h2 { @apply mb-3 text-xl; }
+  p { @apply mb-4; max-width: 65ch; }
+  a { @apply text-brand underline underline-offset-4; }
+  :focus-visible { outline: 3px solid var(--color-ink); outline-offset: 3px; }
+  main:focus { outline: none; }
+  fieldset { min-width: 0; }
+  legend { @apply mb-2 text-base; }
+  [hidden] { display: none !important; }
+}
+
+@layer components {
+  .content { width: min(100% - 2rem, 66rem); margin-inline: auto; }
+  .page { @apply pt-8 pb-16 sm:pt-12; }
+  .site-header { @apply border-b border-line; }
+  .site-header a { @apply inline-flex min-h-11 items-center py-2 text-base font-semibold; }
+  .site-header .wordmark { @apply text-2xl font-bold tracking-tight no-underline; }
+
+  .skip-link {
+    @apply fixed top-2 left-2 z-10 rounded-md bg-white px-4 py-2;
+    transform: translateY(-150%);
+  }
+  .skip-link:focus { transform: none; }
+
+  .surface { @apply min-w-0 rounded-2xl border border-line bg-white p-4 sm:p-6; }
+  .surface > :last-child { margin-bottom: 0; }
+  .status { @apply mb-3 inline-block rounded-full bg-canvas px-3 py-1 text-sm font-semibold; }
+  .status-sample { @apply bg-mint; }
+
+  .action {
+    @apply inline-flex min-h-11 items-center justify-center rounded-lg border border-brand bg-brand px-4 py-2 text-base font-semibold leading-snug text-white no-underline;
+  }
+  .action:hover { background: #10483f; }
+  .action-secondary { @apply bg-transparent text-brand; }
+  .action-secondary:hover { @apply bg-mint; }
+  .field { @apply grid min-w-0 gap-1.5 text-base font-semibold; }
+  .field select, .field input {
+    @apply min-h-11 w-full min-w-0 rounded-lg border border-control bg-white px-3 py-2 font-normal text-ink;
+  }
+  .field select {
+    appearance: none;
+    padding-inline-end: 2rem;
+    background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%2314564c' stroke-width='1.8'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E") right .65rem center / 1rem no-repeat;
+  }
+
+  .today-grid, .planner-grid { @apply grid items-start gap-5; }
+  .today-intro .field { max-width: 24rem; }
+  .air-values { @apply mb-4 grid gap-2; }
+  .air-values dt { @apply text-sm font-semibold text-muted; }
+  .air-values dd { @apply tabular-nums; }
+  .reading { @apply text-4xl leading-tight; }
+  .planner-city { @apply flex flex-wrap items-baseline gap-x-4; }
+  .planner-form { @apply grid gap-6; }
+  .planner-form > p { @apply mb-0; }
+  .choices { @apply flex flex-wrap gap-2; }
+  .choices label {
+    @apply flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-control px-3 py-2 text-base;
+  }
+  .choices label:has(:checked) { @apply border-brand bg-mint; }
+  .choices input { @apply accent-brand; }
+  .check-option { @apply flex min-h-11 items-center gap-3 text-base; }
+  .check-option input { @apply size-4 shrink-0 accent-brand; }
+  .activity { @apply rounded-lg border border-line px-3 pb-3; }
+  .activity legend { @apply px-1; }
+  .error-summary { @apply rounded-lg border-2 px-4 py-3; border-color: #841e37; background: #fbe8ed; }
+  .error-summary h3 { @apply font-bold; }
+  .error-summary ul { @apply list-disc ps-5 text-base; }
+  .error-summary a, .field-error { color: #841e37; }
+  .field-error { @apply text-sm; }
+  .field input[aria-invalid="true"] { border-color: #841e37; }
+  .action:disabled { @apply cursor-wait border-control bg-canvas text-muted; }
+
+  .results { @apply grid min-w-0 gap-6; }
+  .plan-action { @apply leading-relaxed; }
+  .plan-action h3 { @apply text-xl font-bold leading-tight; }
+  .action-facts { @apply mt-4 grid text-base; }
+  .action-facts dt { @apply font-semibold; }
+  .action-facts dd { @apply mb-3; }
+  .advisory { border-inline-start: .3rem solid #841e37; background: #fbe8ed; }
+  .impact { @apply my-3 rounded-lg bg-mint p-3 text-base; }
+  .evidence { @apply mb-4 rounded-lg border border-line px-3 text-base; }
+  .evidence summary { @apply min-h-11 cursor-pointer py-2.5 font-semibold text-brand; }
+  .evidence dl { @apply my-3 grid gap-1; }
+  .evidence dt { @apply text-sm font-semibold; }
+  .evidence dd { @apply mb-2 tabular-nums; }
+  .action-source { @apply text-sm; }
+  .notice-text { @apply my-3 block w-full resize-y rounded-lg border border-control p-3 font-sans text-base; }
+  .notice-status { @apply mt-2 mb-0 text-sm text-muted; }
+  .source-list dt { @apply font-semibold; }
+  .source-list dd { @apply mb-3; }
+  .source-links { @apply mb-4 list-disc space-y-2 pl-5; }
+}
+
+@media (min-width: 32rem) {
+  .time-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 48rem) {
+  .today-grid, .planner-grid { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 1.25rem 2rem; }
+  .today-grid { grid-template-rows: auto 1fr; }
+  .today-air { grid-column: 2; grid-row: 1 / span 2; }
+  .planner-air { grid-column: 2; grid-row: 1; }
+  .planner-fields { grid-column: 1; grid-row: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,3 @@
+# 05 — Run the evaluation suite
+
+Audit docs/06-verification.md against implementation. Run npm run check, npm run build and npm run test:e2e against the production output without secrets, then execute browser and security checks. Measure latency, cache behavior and Lighthouse using the documented procedure. Verify manually that links, focus and form errors read clearly and layouts reflow. Inspect git status and actual staging scope, run secret scanning and review dependency advisories. Fix high-impact failures with tight diffs and rerun relevant tests. Record an evidence matrix with actual commands, outputs, coverage, environment and unverified items. Avoid claims beyond observed results.

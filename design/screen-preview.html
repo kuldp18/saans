@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Saans — UI preview</title>
+<style>
+:root{color-scheme:light;--paper:#f8f7f2;--white:#fff;--ink:#132c2b;--sub:#4b6261;--brand:#14564c;--mint:#e4f1ec;--line:#ccd9d3;--red:#841e37;--pink:#fbe8ed}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:1rem/1.55 system-ui,sans-serif}
+main,.nav{width:min(100% - 2rem,67rem);margin:auto}
+main{padding-block:2rem 4rem}
+.nav{display:flex;justify-content:space-between;gap:1rem;align-items:center;flex-wrap:wrap;padding-block:1rem}
+header{border-bottom:1px solid var(--line)}
+nav{display:flex;gap:.8rem;flex-wrap:wrap}
+a{color:var(--brand);text-underline-offset:.2em}
+a:focus-visible,summary:focus-visible{outline:3px solid var(--ink);outline-offset:4px}
+h1,h2,h3,p{margin-block:0 .65em}
+h1{font-size:clamp(2rem,6vw,3.65rem);line-height:1.05;letter-spacing:-.045em;max-width:14ch}
+h2{font-size:1.65rem;line-height:1.2}
+h3{font-size:1.14rem;line-height:1.3}
+p{max-width:65ch}
+small,.sub{color:var(--sub)}
+.grid{display:grid;grid-template-columns:1.15fr .85fr;gap:1rem;align-items:start}
+.surface{background:var(--white);border:1px solid var(--line);border-radius:1rem;padding:clamp(1rem,3vw,1.7rem);min-width:0}
+section{margin-block:1rem 2.3rem;scroll-margin:1rem}
+.pill{display:inline-block;border-radius:2rem;background:var(--mint);padding:.28rem .75rem;font-size:.86rem;font-weight:650;margin-bottom:.65rem}
+.risk{background:var(--pink);color:var(--red)}
+.reading{display:block;font-size:3.4rem;font-weight:760;line-height:1.1;font-variant-numeric:tabular-nums}
+.action{display:inline-flex;align-items:center;min-height:44px;padding:.45rem 1rem;background:var(--brand);color:#fff;border-radius:.55rem;font-weight:680;text-decoration:none}
+.options{display:flex;gap:.5rem;flex-wrap:wrap;padding:0;list-style:none}
+.options li,.example{border:1px solid #6a817c;border-radius:.55rem;padding:.55rem .75rem}
+.options .chosen,.impact{background:var(--mint)}
+.stack{display:grid;gap:.85rem}
+.impact{padding:.75rem;border-radius:.6rem}
+details{margin-top:.7rem}
+summary{cursor:pointer;padding-block:.6rem;min-height:44px}
+@media(max-width:46rem){.grid{grid-template-columns:1fr}.nav{align-items:flex-start}}
+</style>
+</head>
+<body>
+<header><div class="nav"><strong>Saans · Design preview</strong><nav aria-label="Preview sections"><a href="#today">Today</a><a href="#planner">Planner</a><a href="#results">Results</a><a href="#community">Community</a></nav></div></header>
+<main id="main">
+<p class="sub">Static screen reference with synthetic example data.</p>
+<section id="today" aria-labelledby="t"><div class="grid"><div class="surface">
+<h1 id="t">Make a plan for today’s air</h1>
+<p>See what you can change today in your routine, home and travel.</p>
+<p class="example"><strong>Selected city</strong><br>Delhi</p><a class="action" href="#planner">Preview planner</a>
+</div><aside class="surface"><span class="pill risk">Very unhealthy · Sample</span><strong class="reading">220</strong><p>Modeled US AQI in the sample</p><p><strong>120 µg/m³</strong> PM₂.₅ · Sample 08:00 IST</p><small>Synthetic demonstration. The live view credits Open-Meteo and CAMS.</small><p><a href="https://app.cpcbccr.com/AQIIndia">Official CPCB readings (separate scale)</a></p></aside></div></section>
+<section id="planner" aria-labelledby="p"><h2 id="p">Plan your day</h2><div class="grid"><div class="surface"><h3>Who are you planning for?</h3><ul class="options"><li class="chosen">Household · selected</li><li>Community</li></ul><h3>What needs to happen?</h3><p>School pickup · Fixed<br>Errand · Flexible</p><a class="action" href="#results">Preview results</a></div><div class="surface"><h3>What can you change?</h3><p>Errand time · Any time before 16:00<br>Budget · No purchases<br>Trips · Combine two car errands</p></div></div></section>
+<section id="results" aria-labelledby="r"><span class="pill">Rules plan · Sample</span><h2 id="r">Your plan for Delhi</h2><div class="grid"><div class="stack">
+<article class="surface"><h3>Move the flexible errand to 13:30</h3><p>Keep the fixed pickup. The later forecast window has fewer outdoor particles.</p><p class="impact"><strong>60 µg/m³ lower</strong> modeled outdoor PM₂.₅ during the same one-hour window.</p><details><summary>See the comparison</summary><p>08:30–09:30 averaged 110 µg/m³. 13:30–14:30 averaged 50 µg/m³. Synthetic sample, not personal exposure.</p></details></article>
+<article class="surface"><h3>Combine the two car errands</h3><p><strong>6 vehicle-km avoided</strong> if the combined trip replaces two separate trips. Baseline 16 km, proposed 10 km.</p></article></div>
+<aside class="surface"><h3>Better air indoors</h3><p>Skip incense today to avoid adding smoke particles inside. No purchase needed.</p><p class="sub">The app does not measure indoor PM₂.₅.</p></aside></div></section>
+<section id="community" aria-labelledby="c"><h2 id="c">Community notice</h2><article class="surface"><span class="pill">Sample scenario</span><p><strong>Delhi · Example 08:00 IST</strong></p><p>Move the optional outdoor activity indoors if a venue is available. Coordinate one shared trip for supplies where practical.</p><p><a href="https://app.cpcbccr.com/AQIIndia">Check official CPCB readings</a></p><p class="sub">In the built app, the notice can be copied or downloaded as text.</p></article></section>
+</main>
+</body>
+</html>
