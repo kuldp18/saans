@@ -1,11 +1,11 @@
 import { z } from "zod";
-import { cityIdSchema } from "../../catalog/cities";
+import { locationIdSchema } from "../../catalog/cities";
 import { parsePlanInput } from "../../domain/plan/input";
 import { BodyTooLarge, readBoundedJson } from "./bounded-json";
 
 const BODY_LIMIT = 4096;
 const envelope = z.strictObject({
-  city: cityIdSchema,
+  city: locationIdSchema,
   mode: z.enum(["demo", "live"]),
   profile: z.unknown(),
 });

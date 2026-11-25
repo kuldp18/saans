@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent, type InputHTMLAttributes } from "react";
 import { activityNames } from "@/catalog/activities";
-import { cities, type CityId } from "@/catalog/cities";
+import type { LocationId } from "@/catalog/cities";
 import { delhiGoldenInput } from "@/catalog/delhi-golden";
-import type { RequestedAirMode } from "@/domain/air";
+import { timeZoneLabel, type RequestedAirMode } from "@/domain/air";
 import type { AirPresentation } from "@/domain/air-presentation";
 import { readPlannerForm, type FormErrors } from "@/domain/plan/form";
 import type { Activity, PlanInput } from "@/domain/plan/input";
@@ -94,7 +94,7 @@ function TravelFields({ sample, errors }: { sample: boolean; errors: FormErrors 
 }
 
 export function PlannerForm({ city, mode, initialAir, date }: {
-  city: CityId; mode: RequestedAirMode; initialAir: AirPresentation; date: string;
+  city: LocationId; mode: RequestedAirMode; initialAir: AirPresentation; date: string;
 }) {
   const sample = mode === "demo";
   const [persona, setPersona] = useState<PlanInput["persona"]>("household");
@@ -134,7 +134,7 @@ export function PlannerForm({ city, mode, initialAir, date }: {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (pending) return;
-    const draft = readPlannerForm(new FormData(event.currentTarget), persona, selection[persona]);
+    const draft = readPlannerForm(new FormData(event.currentTarget), persona, selection[persona], initialAir.timeZone);
     if (!draft.ok) {
       showErrors(draft.errors);
       return;
@@ -147,7 +147,7 @@ export function PlannerForm({ city, mode, initialAir, date }: {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ city, mode, profile: draft.profile }),
-        signal: AbortSignal.timeout(8_000),
+        signal: AbortSignal.timeout(12_000),
       });
       if (!response.ok) {
         showErrors({ "form-error": response.status === 400
@@ -176,13 +176,13 @@ export function PlannerForm({ city, mode, initialAir, date }: {
     <>
       <div hidden={!!result}>
         <h1 ref={formHeading} tabIndex={-1}>Plan your day</h1>
-        <p className="planner-city"><strong>{cities[city].name}</strong> <Link href="/">Change city</Link></p>
+        <p className="planner-city"><strong>{initialAir.cityName}</strong> <Link href="/">Change city</Link></p>
       </div>
       {result && (
         <div className="mb-5">
           <Status tone="sample">{result.plan.method === "ai-ranked" ? "AI-ranked plan" : "Rules plan"}</Status>
           {result.aiUnavailable && <p className="text-sm text-muted">AI ranking is unavailable. This plan uses rules.</p>}
-          <h1 ref={planHeading} tabIndex={-1}>Your plan for {cities[city].name}</h1>
+          <h1 ref={planHeading} tabIndex={-1}>Your plan for {result.air.cityName}</h1>
           <button type="button" className="action action-secondary" onClick={edit}>Edit routine</button>
         </div>
       )}
@@ -221,7 +221,7 @@ export function PlannerForm({ city, mode, initialAir, date }: {
 
                 <div className="grid gap-2">
                   <InputField label="Planning date" type="date" id="planning-date" defaultValue={date} error={errors["planning-date"]} />
-                  <p className="text-sm text-muted">Times are in IST. An end time earlier than the start is treated as the next day.</p>
+                  <p className="text-sm text-muted">Times are in {timeZoneLabel(initialAir.timeZone)}. An end time earlier than the start is treated as the next day.</p>
                 </div>
 
                 <fieldset id="activity-selection" tabIndex={-1}

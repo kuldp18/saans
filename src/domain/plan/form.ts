@@ -13,12 +13,22 @@ export function plannerDate(instant: number, timeZone: string) {
   return ["year", "month", "day"].map((part) => parts.find(({ type }) => type === part)?.value).join("-");
 }
 
-function timestamp(date: string, time: string, nextDay = false) {
+function timestamp(date: string, time: string, timeZone: string, nextDay = false) {
   const day = nextDay ? new Date(Date.parse(`${date}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10) : date;
-  return `${day}T${time}:00+05:30`;
+  const wall = `${day}T${time}:00`;
+  const approximate = Date.parse(`${wall}Z`);
+  const formatter = new Intl.DateTimeFormat("en", { timeZone, timeZoneName: "longOffset" });
+  const offsetAt = (instant: number) =>
+    formatter.formatToParts(instant).find(({ type }) => type === "timeZoneName")?.value.slice(3) || "+00:00";
+  const offsets = new Set([offsetAt(approximate - 86_400_000), offsetAt(approximate + 86_400_000)]);
+  const matches = [...offsets].filter((offset) => {
+    const instant = Date.parse(wall + offset);
+    return Number.isFinite(instant) && offsetAt(instant) === offset;
+  });
+  return matches.length === 1 ? wall + matches[0] : null;
 }
 
-export function readPlannerForm(form: FormData, persona: PlanInput["persona"], selected: ActivityId[]) {
+export function readPlannerForm(form: FormData, persona: PlanInput["persona"], selected: ActivityId[], timeZone = "Asia/Kolkata") {
   const read = (name: string) => String(form.get(name) ?? "");
   const errors: FormErrors = {};
   const date = read("planning-date");
@@ -45,14 +55,21 @@ export function readPlannerForm(form: FormData, persona: PlanInput["persona"], s
     if (flexible && !clockTime.test(latest)) errors[latestKey] = `${label}: enter the latest feasible finish.`;
     if (!validDate || errors[startKey] || errors[endKey] || errors[earliestKey] || errors[latestKey]) return [];
 
-    const startAt = timestamp(date, start);
-    const endAt = timestamp(date, end, end < start);
+    const localTimestamp = (key: string, time: string, nextDay = false) => {
+      const value = timestamp(date, time, timeZone, nextDay);
+      if (!value) errors[key] = `${label}: choose an unambiguous local time outside the clock change.`;
+      return value;
+    };
+    const startAt = localTimestamp(startKey, start);
+    const endAt = localTimestamp(endKey, end, end < start);
+    if (!startAt || !endAt) return [];
     const minutes = (Date.parse(endAt) - Date.parse(startAt)) / 60_000;
     if (minutes < 30 || minutes > 120) errors[endKey] = `${label}: allow 30 to 120 minutes between start and end.`;
     if (!flexible) return [{ activityId, flexibility: "fixed" as const, start: startAt, end: endAt }];
 
-    const earliestStart = timestamp(date, earliest);
-    const latestEnd = timestamp(date, latest, latest < start);
+    const earliestStart = localTimestamp(earliestKey, earliest);
+    const latestEnd = localTimestamp(latestKey, latest, latest < start);
+    if (!earliestStart || !latestEnd) return [];
     if (Date.parse(earliestStart) > Date.parse(startAt)) errors[earliestKey] = `${label}: the feasible start must be at or before the scheduled start.`;
     if (Date.parse(latestEnd) < Date.parse(endAt)) errors[latestKey] = `${label}: the feasible finish must be at or after the scheduled end.`;
     return [{ activityId, flexibility: "flexible" as const, start: startAt, end: endAt, earliestStart, latestEnd }];

@@ -1,4 +1,4 @@
-import type { CityId } from "../../catalog/cities";
+import type { LocationId } from "../../catalog/cities";
 import { delhiSample } from "../../catalog/delhi-demo";
 import {
   AIR_STALE_MS, HOUR_MS, PLANNING_HORIZON_MS,
@@ -24,14 +24,19 @@ function coversPlanningHorizon(snapshot: AirSnapshot, now: number): boolean {
 
 export function createAirService({ now, loadLive }: {
   now: () => number;
-  loadLive?: (cityId: CityId) => Promise<AirSnapshot | null>;
+  loadLive?: (cityId: LocationId) => Promise<AirSnapshot | null>;
 }) {
-  const cache = new Map<CityId, CacheEntry>();
-  return async (cityId: CityId, mode: RequestedAirMode): Promise<AirSnapshot> => {
+  const cache = new Map<LocationId, CacheEntry>();
+  return async (cityId: LocationId, mode: RequestedAirMode): Promise<AirSnapshot> => {
     if (mode === "demo") return cityId === delhiSample.cityId ? delhiSample : unavailableAir(cityId);
     if (!loadLive) return unavailableAir(cityId);
 
     const readAt = now();
+    if (!cache.has(cityId) && cache.size >= 256) {
+      const oldest = [...cache].find(([, entry]) => !entry.pending);
+      if (!oldest) return unavailableAir(cityId);
+      cache.delete(oldest[0]);
+    }
     const entry = cache.get(cityId) ?? {};
     cache.set(cityId, entry);
     if (entry.snapshot && isFreshAir(entry.snapshot, readAt) && coversPlanningHorizon(entry.snapshot, readAt)) {

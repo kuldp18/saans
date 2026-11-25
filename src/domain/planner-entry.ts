@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { cityIdSchema } from "../catalog/cities";
+import { locationIdSchema } from "../catalog/cities";
 
 const entrySchema = z.object({
-  city: cityIdSchema.optional(),
+  city: locationIdSchema.optional(),
   mode: z.enum(["live", "demo"]).optional(),
 });
 

@@ -5,6 +5,7 @@ import { actions } from "@/catalog/actions";
 import { alternateReasons } from "@/catalog/action-reasons";
 import { activityNames } from "@/catalog/activities";
 import { sources } from "@/catalog/sources";
+import { timeZoneLabel } from "@/domain/air";
 import type { PlanResult } from "@/domain/plan/result";
 import { Card } from "./ui";
 
@@ -24,7 +25,7 @@ function localWindow(start: string, end: string, timeZone: string) {
   const first = Date.parse(start);
   const last = Date.parse(end);
   const dates = day.format(first) === day.format(last) ? "" : ` ${day.format(first)}–${day.format(last)}`;
-  return `${clock.format(first)}–${clock.format(last)}${dates} IST`;
+  return `${clock.format(first)}–${clock.format(last)}${dates} ${timeZoneLabel(timeZone)}`;
 }
 
 function Evidence({ card, timeZone }: { card: PlanCard; timeZone: string }) {
@@ -75,7 +76,8 @@ function ActionCard({ card, timeZone }: { card: PlanCard; timeZone: string }) {
         <dt>What changes</dt>
         <dd>{change ? `Move this activity to ${change}.` : action.mechanism}</dd>
         <dt>Limits</dt>
-        <dd>{action.caveat}</dd>
+        <dd>{card.id === "check-local-advisory" && card.sourceId === "OPEN-METEO-AIR"
+          ? "The modeled US AQI may differ from readings reported by local authorities." : action.caveat}</dd>
       </dl>
       <Evidence card={card} timeZone={timeZone} />
       <p className="action-source"><a href={source.url}>{source.label}</a></p>

@@ -1,23 +1,29 @@
 export class BodyTooLarge extends Error {}
 
-export async function readBoundedJson(body: ReadableStream<Uint8Array> | null, limit: number, signal?: AbortSignal): Promise<unknown> {
+export async function readBoundedBytes(body: ReadableStream<Uint8Array> | null, limit: number, signal?: AbortSignal): Promise<Uint8Array> {
   if (!body) throw new Error("Missing body");
   const reader = body.getReader();
   const cancel = () => { void reader.cancel().catch(() => {}); };
   signal?.addEventListener("abort", cancel, { once: true });
   try {
     signal?.throwIfAborted();
-    const decoder = new TextDecoder("utf-8", { fatal: true });
     let bytes = 0;
-    let text = "";
+    const chunks: Uint8Array[] = [];
     while (true) {
       const { value, done } = await reader.read();
       signal?.throwIfAborted();
-      if (done) return JSON.parse(text + decoder.decode());
+      if (done) break;
       bytes += value.byteLength;
       if (bytes > limit) throw new BodyTooLarge();
-      text += decoder.decode(value, { stream: true });
+      chunks.push(value);
     }
+    const data = new Uint8Array(bytes);
+    let offset = 0;
+    for (const chunk of chunks) {
+      data.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    return data;
   } catch (error) {
     cancel();
     throw error;
@@ -25,6 +31,11 @@ export async function readBoundedJson(body: ReadableStream<Uint8Array> | null, l
     signal?.removeEventListener("abort", cancel);
     reader.releaseLock();
   }
+}
+
+export async function readBoundedJson(body: ReadableStream<Uint8Array> | null, limit: number, signal?: AbortSignal): Promise<unknown> {
+  const bytes = await readBoundedBytes(body, limit, signal);
+  return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
 }
 
 export async function withDeadline<T>(ms: number, work: (signal: AbortSignal) => Promise<T>): Promise<T> {

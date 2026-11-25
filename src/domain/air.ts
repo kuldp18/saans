@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { cities, cityIdSchema } from "../catalog/cities";
+import { builtInPlace, locationIdSchema, placeSchema, timeZoneSchema, type LocationId, type Place } from "../catalog/cities";
+import { indiaAqiSchema } from "./india-aqi";
 
 export const HOUR_MS = 3_600_000;
 export const AIR_FRESH_MS = 15 * 60_000;
@@ -13,12 +14,14 @@ const hourlySchema = z.strictObject({
 });
 
 export const airSnapshotSchema = z.strictObject({
-  cityId: cityIdSchema,
-  timeZone: z.literal("Asia/Kolkata"),
+  cityId: locationIdSchema,
+  timeZone: timeZoneSchema,
+  location: placeSchema.optional(),
   sourceId: z.enum(["OPEN-METEO-AIR", "SAANS-DELHI-SAMPLE"]),
   mode: z.enum(["live-model", "stale-model", "demo", "unavailable"]),
   fetchedAt: utc.nullable(),
   modelTime: utc.optional(),
+  indiaAqi: indiaAqiSchema.nullable().optional(),
   hourly: z.array(hourlySchema).max(48),
 }).superRefine((snapshot, ctx) => {
   const { mode, fetchedAt, hourly, sourceId } = snapshot;
@@ -31,6 +34,9 @@ export const airSnapshotSchema = z.strictObject({
         : sourceId === "OPEN-METEO-AIR" && hourly.length === 0
     );
   if (!validMode) ctx.addIssue({ code: "custom", path: ["mode"], message: "Inconsistent snapshot mode" });
+  if (snapshot.location && (snapshot.location.id !== snapshot.cityId || snapshot.location.timeZone !== snapshot.timeZone)) {
+    ctx.addIssue({ code: "custom", path: ["location"], message: "Inconsistent snapshot location" });
+  }
 
   let previous: number | undefined;
   for (const [index, bin] of hourly.entries()) {
@@ -47,8 +53,12 @@ export type AirSnapshot = z.infer<typeof airSnapshotSchema>;
 export type AirHour = z.infer<typeof hourlySchema>;
 export type RequestedAirMode = "live" | "demo";
 
-export function unavailableAir(cityId: AirSnapshot["cityId"]): AirSnapshot {
-  return { cityId, timeZone: cities[cityId].timeZone, sourceId: "OPEN-METEO-AIR", mode: "unavailable", fetchedAt: null, hourly: [] };
+export function unavailableAir(cityId: LocationId, location?: Place): AirSnapshot {
+  return {
+    cityId, timeZone: location?.timeZone ?? builtInPlace(cityId)?.timeZone ?? "UTC",
+    ...(location ? { location } : {}),
+    sourceId: "OPEN-METEO-AIR", mode: "unavailable", fetchedAt: null, hourly: [],
+  };
 }
 
 export function airHourAt(snapshot: AirSnapshot, instant: number): AirHour | undefined {
@@ -82,4 +92,8 @@ export function formatLocalTime(validAt: string, timeZone: string): string {
     timeStyle: "short",
     hourCycle: "h23",
   }).format(new Date(validAt));
+}
+
+export function timeZoneLabel(timeZone: string): string {
+  return timeZone === "Asia/Kolkata" ? "IST" : timeZone.replaceAll("_", " ");
 }

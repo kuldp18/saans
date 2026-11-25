@@ -25,6 +25,7 @@ export default function SourcesPage() {
           <ul className="source-links">
             <li><a href="https://www.airnow.gov/aqi/aqi-basics/" rel="noreferrer">AirNow US AQI categories</a></li>
             <li><a href={sources["OPEN-METEO-AIR"].url} rel="noreferrer">Open-Meteo air quality forecast and CAMS coverage</a></li>
+            <li><a href="https://open-meteo.com/en/docs/geocoding-api" rel="noreferrer">Open-Meteo location search using GeoNames</a></li>
           </ul>
           <OfficialAirLink />
         </Card>
@@ -38,7 +39,7 @@ export default function SourcesPage() {
         </Card>
         <Card>
           <h2>Planner privacy</h2>
-          <p>Saans sends routine choices to its planner when you generate a plan. It uses them for that request. Community notices contain public air data and general actions. AI is off in the sample.</p>
+          <p>If you allow location access, your browser can select a nearby city from the six built-in Indian cities. Device coordinates stay in the browser. Typed city searches go to Open-Meteo. Saans uses your routine choices for the plan request, and community notices contain public air data and general actions. AI is off in the sample.</p>
         </Card>
       </div>
     </>

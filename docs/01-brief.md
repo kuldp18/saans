@@ -6,7 +6,7 @@ A red AQI badge tells people conditions are bad. It rarely tells a family how to
 
 ## Product
 
-Saans converts a city forecast and a short routine form into an ordered action plan. Every action answers what to change, why it helps and what the estimate actually measures. Focus on urban India, beginning with Delhi, Noida, Gurugram, Lucknow, Ahmedabad and Kolkata. City selection is explicit and static for the MVP. No GPS or inferred location.
+Saans converts city air data and a short routine form into an ordered action plan. Every action answers what to change, why it helps and what the estimate actually measures. The India-focused experience includes separate CPCB readings where available. Live city search works worldwide through Open-Meteo geocoding. The browser can preselect Delhi, Noida, Gurugram, Lucknow, Ahmedabad or Kolkata when nearby after the user grants location access. Device coordinates remain in the browser.
 
 | Adult user | Need | Acceptance |
 | --- | --- | --- |

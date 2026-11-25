@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { builtInPlace } from "@/catalog/cities";
 import { DELHI_DEMO_ANCHOR } from "@/catalog/delhi-demo";
 import { PlannerForm } from "@/components/planner-form";
 import { presentAir } from "@/domain/air-presentation";
@@ -27,6 +28,13 @@ export default async function PlanPage({ searchParams }: {
   }
 
   const snapshot = await getAir(entry.city, entry.kind);
+  if (!snapshot.location && !builtInPlace(entry.city)) return (
+    <>
+      <h1>City unavailable</h1>
+      <p>We could not look up this city. Search again or try the Delhi sample.</p>
+      <Link href="/" className="action">Search cities</Link>
+    </>
+  );
   const now = airClock();
   const date = plannerDate(snapshot.mode === "demo" ? Date.parse(DELHI_DEMO_ANCHOR) : now, snapshot.timeZone);
   return <PlannerForm key={`${entry.city}:${entry.kind}`} city={entry.city} mode={entry.kind} initialAir={presentAir(snapshot, now)} date={date} />;

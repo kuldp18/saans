@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AIR_FRESH_MS, AIR_STALE_MS, HOUR_MS, airHourAt } from "../../src/domain/air";
 import { createOpenMeteo, normalizeOpenMeteo } from "../../src/server/air/open-meteo";
 import { createAirService } from "../../src/server/air/service";
+import { createAirRuntime } from "../../src/server/air/runtime";
 
 const start = Date.parse("2026-01-15T02:00:00Z");
 const city = "delhi";
@@ -9,7 +10,7 @@ const city = "delhi";
 function upstream(hour = start) {
   return {
     utc_offset_seconds: 0,
-    hourly_units: { time: "iso8601", pm2_5: "μg/m³", us_aqi: "U.S. AQI" },
+    hourly_units: { time: "iso8601", pm2_5: "μg/m³", us_aqi: "USAQI" },
     hourly: {
       time: Array.from({ length: 16 }, (_, offset) => new Date(hour + offset * HOUR_MS).toISOString().slice(0, 16)),
       pm2_5: Array.from<unknown>({ length: 16 }).fill(72),
@@ -139,5 +140,54 @@ describe("air cache", () => {
     time += 30_000;
     expect((await getAir(city, "live")).mode).toBe("live-model");
     expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("environment-configured live air", () => {
+  const env: NodeJS.ProcessEnv = {
+    NODE_ENV: "production", APP_ORIGIN: "http://127.0.0.1:3000", AIR_LIVE_ENABLED: "1", CPCB_BULLETIN_ENABLED: "0",
+  };
+
+  it("enables real transport in the local production runtime and leaves the explicit demo offline", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockImplementation(async () => Response.json(upstream()));
+    const getAir = createAirRuntime(env, { now: () => start, fetcher });
+    expect((await getAir(city, "demo")).mode).toBe("demo");
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(await getAir(city, "live")).toMatchObject({ mode: "live-model", indiaAqi: null });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends a paid key only to the allowlisted customer endpoint", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockImplementation(async () => Response.json(upstream()));
+    const opts = { now: () => start, fetcher };
+    for (const endpoint of ["https://other.example/air", "https://air-quality-api.open-meteo.com/v1/air-quality"]) {
+      const getAir = createAirRuntime({ ...env, OPEN_METEO_API_KEY: "synthetic-key", OPEN_METEO_AIR_URL: endpoint }, opts);
+      expect((await getAir(city, "live")).mode).toBe("unavailable");
+    }
+    expect(fetcher).not.toHaveBeenCalled();
+    const getAir = createAirRuntime({ ...env, OPEN_METEO_API_KEY: "synthetic-key" }, opts);
+    expect((await getAir(city, "live")).mode).toBe("live-model");
+    const url = new URL(String(fetcher.mock.calls[0][0]));
+    expect(url.hostname).toBe("customer-air-quality-api.open-meteo.com");
+    expect(url.searchParams.get("apikey")).toBe("synthetic-key");
+  });
+
+  it("requires and checks the shared upstream budget before any hosted forecast", async () => {
+    const hosted = { ...env, APP_ORIGIN: "https://saans.example" };
+    const fetcher = vi.fn<typeof fetch>();
+    const opts = { now: () => start, fetcher };
+    expect((await createAirRuntime(hosted, opts)(city, "live")).mode).toBe("unavailable");
+    expect(fetcher).not.toHaveBeenCalled();
+    const config = { ...hosted, AIR_UPSTREAM_PER_MINUTE: "5", AIR_UPSTREAM_PER_DAY: "50",
+      AIR_BUDGET_NAMESPACE: "air", UPSTASH_REDIS_REST_URL: "https://example.upstash.io", UPSTASH_REDIS_REST_TOKEN: "synthetic" };
+    fetcher.mockImplementationOnce(async () => Response.json({ result: 0 }));
+    expect((await createAirRuntime(config, opts)(city, "live")).mode).toBe("unavailable");
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    fetcher.mockImplementationOnce(async () => Response.json({ result: 1 }))
+      .mockImplementationOnce(async () => Response.json(upstream()));
+    expect((await createAirRuntime(config, opts)(city, "live")).mode).toBe("live-model");
+    expect(fetcher.mock.calls.map(([url]) => new URL(String(url)).hostname)).toEqual([
+      "example.upstash.io", "example.upstash.io", "air-quality-api.open-meteo.com",
+    ]);
   });
 });

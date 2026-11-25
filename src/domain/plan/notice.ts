@@ -1,8 +1,8 @@
 import type { ActionId } from "../../catalog/actions";
-import { cities } from "../../catalog/cities";
 import { sources } from "../../catalog/sources";
 import type { AirPresentation } from "../air-presentation";
-import { formatLocalTime } from "../air";
+import { formatLocalTime, timeZoneLabel } from "../air";
+import { indiaAqiBand } from "../india-aqi";
 import type { PlanResult } from "./result";
 
 const protective: Partial<Record<ActionId, string>> = {
@@ -28,15 +28,19 @@ export function buildCommunityNotice(plan: PlanResult["plan"], air: AirPresentat
   const transport = plan.actions.map(({ id }) => travel[id]).find(Boolean)
     ?? "Check whether a combined supply trip is feasible.";
   return [
-    `${cities[plan.cityId].name} · Community air notice`,
+    `${air.cityName} · Community air notice`,
     label,
-    air.hour ? `Data valid ${formatLocalTime(air.hour.validAt, air.timeZone)} IST` : "Forecast valid time unavailable",
+    air.hour ? `Data valid ${formatLocalTime(air.hour.validAt, air.timeZone)} ${timeZoneLabel(air.timeZone)}` : "Forecast valid time unavailable",
+    ...(air.indiaAqi ? [
+      `India AQI ${air.indiaAqi.value} (${indiaAqiBand(air.indiaAqi.value)}) · CPCB bulletin ${formatLocalTime(air.indiaAqi.validAt, air.timeZone)} IST`,
+      `CPCB bulletin: ${air.indiaAqi.bulletinUrl}`,
+    ] : []),
     "",
     protection,
     transport,
     "",
     ...(air.mode === "live-model" || air.mode === "stale-model"
       ? [`Forecast source: ${sources["OPEN-METEO-AIR"].url}`] : []),
-    `Official CPCB guidance (India AQI): ${sources["CPCB-INDIA"].url}`,
+    ...(air.countryCode === "IN" ? [`Official CPCB guidance (India AQI): ${sources["CPCB-INDIA"].url}`] : []),
   ].join("\n");
 }

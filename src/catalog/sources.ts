@@ -1,5 +1,6 @@
 export const sources = {
   "CPCB-INDIA": { label: "Official CPCB readings", url: "https://app.cpcbccr.com/AQIIndia" },
+  "CPCB-BULLETIN": { label: "CPCB daily bulletin", url: "https://cpcb.gov.in/AQI_Bulletin.php" },
   "OPEN-METEO-AIR": { label: "Open-Meteo · CAMS Global", url: "https://open-meteo.com/en/docs/air-quality-api" },
   "SAANS-DELHI-SAMPLE": { label: "Saans synthetic fixture", url: "/sources" },
   "AIRNOW-ACTIVITY": { label: "AirNow outdoor activity guidance", url: "https://document.airnow.gov/air-quality-and-outdoor-guidance-for-schools.pdf" },

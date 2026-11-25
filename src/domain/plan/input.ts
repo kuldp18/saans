@@ -42,7 +42,7 @@ const planInputSchema = z.strictObject({
     const start = Date.parse(item.start);
     const end = Date.parse(item.end);
     const duration = (end - start) / 60_000;
-    if (seen.has(item.activityId) || start % (30 * 60_000) !== 0 ||
+    if (seen.has(item.activityId) || !/^\d{4}-\d{2}-\d{2}T\d{2}:(00|30)(?::00(?:\.0+)?)?(?:Z|[+-])/.test(item.start) ||
       duration < 30 || duration > 120 || !Number.isInteger(duration) ||
       (item.flexibility === "flexible" && (
         Date.parse(item.earliestStart) > start || Date.parse(item.latestEnd) < end

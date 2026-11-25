@@ -48,7 +48,8 @@ function routineDecision({
   if (activity.flexibility === "flexible" && baseline?.pm25UgM3 != null && !canGoIndoors &&
     !(optionalOutdoor && severeNow)) {
     const duration = end - start;
-    const first = Math.ceil(Math.max(anchor, Date.parse(activity.earliestStart)) / HALF_HOUR_MS) * HALF_HOUR_MS;
+    const phase = ((start % HALF_HOUR_MS) + HALF_HOUR_MS) % HALF_HOUR_MS;
+    const first = Math.ceil((Math.max(anchor, Date.parse(activity.earliestStart)) - phase) / HALF_HOUR_MS) * HALF_HOUR_MS + phase;
     const last = Math.min(limit, Date.parse(activity.latestEnd)) - duration;
     let bestStart = start;
     let bestPm25 = baseline.pm25UgM3;
@@ -107,7 +108,9 @@ export function buildRulesPlan(input: PlanInput, snapshot: AirSnapshot, now: num
   const cards: PlanAction[] = [];
 
   const append = (id: ActionId, fields: Omit<PlanAction, "id" | "sourceId"> = {}) => {
-    const sourceId = id === "shift-flexible-activity" ? snapshot.sourceId : actions[id].sourceId;
+    const catalogSource = actions[id].sourceId;
+    const sourceId = id === "shift-flexible-activity" ? snapshot.sourceId
+      : catalogSource === "CPCB-INDIA" && (snapshot.location?.countryCode ?? "IN") !== "IN" ? "OPEN-METEO-AIR" : catalogSource;
     cards.push({ id, sourceId, ...fields });
   };
   if (actions["check-local-advisory"].eligible(context)) append("check-local-advisory");

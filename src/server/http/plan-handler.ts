@@ -1,5 +1,5 @@
 import { presentAir } from "../../domain/air-presentation";
-import type { CityId } from "../../catalog/cities";
+import { builtInPlace, type LocationId } from "../../catalog/cities";
 import type { AirSnapshot, RequestedAirMode } from "../../domain/air";
 import { buildCommunityNotice } from "../../domain/plan/notice";
 import type { PlanResult } from "../../domain/plan/result";
@@ -10,7 +10,7 @@ import { allowsPlanOrigin, readPlanRequest } from "./plan-request";
 const headers = { "Cache-Control": "no-store" };
 
 export function createPlanHandler({ getAir, now, rank, gate, origin }: {
-  getAir: (city: CityId, mode: RequestedAirMode) => Promise<AirSnapshot>;
+  getAir: (city: LocationId, mode: RequestedAirMode) => Promise<AirSnapshot>;
   now: () => number;
   rank: ReturnType<typeof createAiRanker>;
   gate: () => number;
@@ -30,6 +30,9 @@ export function createPlanHandler({ getAir, now, rank, gate, origin }: {
     if (!input.ok) return Response.json({ error: input.error }, { status: input.status, headers });
 
     const snapshot = await getAir(input.city, input.mode);
+    if (!builtInPlace(input.city) && !snapshot.location) {
+      return Response.json({ error: { code: "location_unavailable" } }, { status: 404, headers });
+    }
     const time = now();
     const air = presentAir(snapshot, time);
     const rules = buildRulesPlan(input.profile, snapshot, time);

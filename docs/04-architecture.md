@@ -8,7 +8,8 @@ Use Next.js App Router and Node runtime with strict TypeScript, Tailwind, Zod, n
 
 | Route | Inputs | Result |
 | --- | --- | --- |
-| GET /api/air?city=delhi&mode=demo | Allowlisted city ID and mode | Normalized city snapshot, no user profile. Missing live data yields explicit mode and no fake reading. |
+| GET /api/locations?q=Paris | One bounded city-name query | Populated places from Open-Meteo geocoding with a GeoNames ID, country, region and time zone. |
+| GET /api/air?city=delhi&mode=demo | Built-in city ID or server-resolved GeoNames ID, and mode | Normalized public city snapshot. Missing live data yields an explicit unavailable mode. |
 | POST /api/plan | Strict JSON for city ID, data mode, persona, ≤3 activity enums, fixed/flexible local time boundaries, budget/mobility and equipment enums, bounded distance. No free text. | Plan cards with IDs, evidence, sourceId, calculated impacts, hydration-safe timestamps and method. Return Cache-Control: no-store. |
 | GET /api/health | None | Minimal liveness only. No secrets, quota details or dependency payloads. |
 
@@ -16,7 +17,9 @@ Use pointer/code field errors and stable JSON error shape. Reject unexpected key
 
 ## Air provider and caching
 
-Use server-side Open-Meteo Air Quality, CAMS Global for India. Request only needed hourly variables with UTC timestamps and a bounded forecast horizon. Cache validated public data per city, 15-minute freshness, and permit at most two hours of stale display with time-specific decisions disabled. Do not reuse a snapshot that lacks the interval needed for scoring. Cache fresh misses with short negative TTL if helpful. Coalesce in-flight work within a process. Add bounded platform rate limits for public requests; use edge or shared quotas for any public live upstream calls. Prefer a fresh cache hit without calling upstream. Shared mutable caches never hold household inputs. Explicit demo mode always ships with a known fixture and no network requirement. Data outage has a neutral mode, with opt-in sample mode.
+Use server-side Open-Meteo Air Quality with CAMS Global. The geocoder provides public city coordinates and IANA time zones. The server resolves IDs against the provider and applies the same shared upstream budget to location and air requests. Request only needed hourly variables with UTC timestamps and a bounded forecast horizon. Cache validated public data per city, 15-minute freshness, and permit at most two hours of stale display with time-specific decisions disabled. Do not reuse a snapshot that lacks the interval needed for scoring. Cache fresh misses with short negative TTL if helpful. Coalesce in-flight work within a process. Add bounded platform rate limits for public requests; use edge or shared quotas for any public live upstream calls. Prefer a fresh cache hit without calling upstream. Shared mutable caches never hold household inputs. Explicit demo mode always ships with a known fixture and no network requirement. Data outage has a neutral mode, with opt-in sample mode.
+
+The live response keeps CPCB India AQI separate in `indiaAqi`. Saans reads the latest dated official city bulletin, validates the report and city row, and retains the PDF link and observation time. A shared local cache coalesces bulletin fetches across cities. The bulletin can remain available when the modeled feed is unavailable, or vice versa. Hosted air requests reserve the configured shared budget before each provider call. The rules engine still uses the forecast for time comparisons and never converts US AQI into India AQI.
 
 ## Gemini design
 

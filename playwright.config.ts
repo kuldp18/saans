@@ -13,6 +13,6 @@ export default defineConfig({
   webServer: {
     command: "npm run start -- --hostname 127.0.0.1 --port 3417",
     url: origin,
-    env: { NEXT_TELEMETRY_DISABLED: "1" },
+    env: { NEXT_TELEMETRY_DISABLED: "1", APP_ORIGIN: origin, AIR_LIVE_ENABLED: "0", AI_MODE: "off" },
   },
 });

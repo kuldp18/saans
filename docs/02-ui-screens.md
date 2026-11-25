@@ -8,7 +8,7 @@ Use lightweight CSS and system fonts. Use decorative illustration only if it car
 
 ## 1. Today — /
 
-Header: wordmark, Plan, Sources. Single page title “Make a plan for today’s air.” City field is a native select, with a visible label and no inferred location. Primary action “Build my plan.” Secondary “Try Delhi demo.” On first load, the current-data card prompts city selection or shows an explicitly labeled sample preview. Once city resolves, show AQI number, named band, PM2.5, provider, “Model estimate,” valid local time and forecast availability. Show an inline official CPCB link with an explanation that CPCB uses a different AQI scale.
+Header: wordmark, Plan, Sources. Single page title “Make a plan for today’s air.” The city search has a visible label, native suggestions and a separate location control. With browser permission, Today preselects a nearby supported city. Primary action “Build my plan.” Secondary “Try Delhi demo.” Today prompts city selection. The planner separates India AQI from the modeled US AQI and outdoor PM2.5, with the source and valid local time for each. Link official CPCB guidance.
 
 Desktop: two columns with form left and air card right. Mobile: city and critical air context above the planner CTA, one column. Missing data leaves city controls interactive and offers “Use sample data” as an explicit choice. Stale data shows timestamp, a stale badge and no time-specific CTA.
 

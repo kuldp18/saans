@@ -134,7 +134,7 @@ test("shows stale forecast provenance without suggesting a time", async ({ page 
 
 async function openLiveErrand(page: Page) {
   await page.goto("/");
-  await page.getByLabel("City", { exact: true }).selectOption("delhi");
+  await page.getByLabel("City", { exact: true }).fill("Delhi");
   await page.getByRole("button", { name: "Build my plan" }).click();
   await page.getByLabel("Planning date").fill("2026-01-15");
   await page.getByLabel("Include school pickup").uncheck();
@@ -152,6 +152,8 @@ test("distinguishes modeled data from sample data and AI ranking from rules", as
     cityId: "delhi", timeZone: "Asia/Kolkata", sourceId: "OPEN-METEO-AIR", mode: "live-model",
     fetchedAt: new Date(now).toISOString(),
     hourly: [{ validAt: "2026-01-15T02:00:00Z", pm25UgM3: 120, usAqi: 220 }],
+    indiaAqi: { value: 266, validAt: "2026-01-14T10:30:00Z", sourceId: "CPCB-BULLETIN",
+      bulletinUrl: "https://cpcb.gov.in/upload/Downloads/AQI_Bulletin_20260114.pdf" },
   });
   const rules = buildRulesPlan(delhiGoldenInput, snapshot, now);
   await page.route("**/api/plan", async (route) => {
@@ -162,6 +164,10 @@ test("distinguishes modeled data from sample data and AI ranking from rules", as
   await expect(page.getByText("AI-ranked plan", { exact: true })).toBeVisible();
   await expect(page.getByText("Model estimate", { exact: true })).toBeVisible();
   await expect(page.getByText("Modeled US AQI", { exact: true })).toBeVisible();
+  const india = page.getByRole("region", { name: "India AQI", exact: true });
+  await expect(india).toContainText("266 Poor");
+  await expect(india).toContainText("14 Jan 2026, 16:00 IST");
+  await expect(india.getByRole("link", { name: "CPCB daily bulletin" })).toHaveAttribute("href", snapshot.indiaAqi!.bulletinUrl);
   await expect(page.getByRole("link", { name: "Open-Meteo · CAMS Global" })).toBeVisible();
   for (const label of ["Sample scenario", "Stale model estimate", "Rules plan"]) {
     await expect(page.getByText(label, { exact: true })).toHaveCount(0);

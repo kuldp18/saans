@@ -64,6 +64,8 @@
   .today-grid, .planner-grid { @apply grid items-start gap-5; }
   .today-intro .field { max-width: 24rem; }
   .air-values { @apply mb-4 grid gap-2; }
+  .air-index-panels { @apply mb-4 grid gap-4; }
+  .air-index-panels > section + section { @apply border-t border-line pt-4; }
   .air-values dt { @apply text-sm font-semibold text-muted; }
   .air-values dd { @apply tabular-nums; }
   .reading { @apply text-4xl leading-tight; }

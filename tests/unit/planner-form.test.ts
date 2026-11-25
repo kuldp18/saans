@@ -37,6 +37,17 @@ it("rejects incompatible bounds, time increments, and empty routines with field 
     .toMatchObject({ ok: false, errors: { "planning-date": expect.any(String), "activity-selection": expect.any(String) } });
 });
 
+it("accepts quarter-hour zones and rejects skipped or repeated local times", () => {
+  expect(readPlannerForm(fields(errand), "household", ["errand"], "Asia/Kathmandu")).toMatchObject({
+    ok: true, profile: { activities: [{ start: "2026-01-15T23:30:00+05:45" }] },
+  });
+  const fixed = { ...errand, "errand-start": "02:30", "errand-end": "03:30", "errand-flexibility": "fixed" };
+  for (const date of ["2026-03-29", "2026-10-25"]) {
+    expect(readPlannerForm(fields({ ...fixed, "planning-date": date }), "household", ["errand"], "Europe/Paris"))
+      .toMatchObject({ ok: false, errors: { "errand-start": expect.stringContaining("clock change") } });
+  }
+});
+
 it("only scores confirmed feasible car travel and validates both distance fields", () => {
   const travel = { ...errand, "travel-option": "combine", "travel-confirmed": "", "travel-before": "600", "travel-after": "0" };
   expect(readPlannerForm(fields(travel), "community", ["errand"]))
