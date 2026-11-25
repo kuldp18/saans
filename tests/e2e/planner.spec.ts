@@ -109,6 +109,35 @@ test("preserves edits after result and selects the notice if clipboard access is
   await expect(end).toHaveValue("09:00");
 });
 
+test("uses editable schedule examples in the regular planner", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 850 });
+  await page.goto("/plan?city=delhi");
+  await expect(page.getByRole("form", { name: "Daily routine" })).toHaveAccessibleDescription(/activity times are examples/);
+  const errand = page.getByRole("group", { name: "Errand", exact: true });
+  await expect(errand.getByLabel("Start time")).toHaveValue("11:00");
+  await errand.getByLabel("Start time").fill("11:30");
+  const request = page.waitForRequest("**/api/plan");
+  await page.getByRole("button", { name: "Generate plan" }).click();
+  expect((await request).postDataJSON()).toMatchObject({
+    mode: "live",
+    profile: { activities: expect.arrayContaining([
+      expect.objectContaining({ activityId: "errand", start: expect.stringContaining("T11:30:00") }),
+    ]) },
+  });
+  await expect(page.getByRole("heading", { name: "Your plan for Delhi" })).toBeFocused();
+  await page.getByRole("button", { name: "Edit routine" }).click();
+  await expect(errand.getByLabel("Start time")).toHaveValue("11:30");
+  await page.getByRole("radio", { name: "Community" }).check();
+  const activity = page.getByRole("group", { name: "Outdoor group activity", exact: true });
+  await expect(activity.getByLabel("Start time")).toHaveValue("10:00");
+  await page.getByLabel("Travel option").selectOption("combine");
+  await page.getByLabel("This option can replace the original car travel").check();
+  const distance = page.getByLabel("Current private-car distance (km)");
+  await expect(distance).toHaveAttribute("placeholder", "e.g. 8");
+  await expect(distance).toHaveValue("");
+  await checkPage(page);
+});
+
 test("shows stale forecast provenance without suggesting a time", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 850 });
   const now = Date.parse("2026-01-15T02:45:00Z");

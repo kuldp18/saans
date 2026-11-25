@@ -4,6 +4,8 @@ Delhi sample requests always return Rules plans. Operator mode can rank eligible
 
 ## Local smoke test
 
+Next.js reads `.env.local` before `.env` for each setting. If `.env.local` sets `AI_MODE=off`, that setting takes precedence. Restart the development server after changing the configuration. The regular browser form requests a Rules plan. The operator smoke script sends the server-verified bearer token.
+
 An administrator must verify the adult operator, current regional and project eligibility, applicable terms, model access, and observed project quota before enabling this mode. Check the [Gemini API terms](https://ai.google.dev/gemini-api/terms), [available regions](https://ai.google.dev/gemini-api/docs/available-regions), and [quota documentation](https://ai.google.dev/gemini-api/docs/rate-limits).
 
 - In an untracked `.env.local`, set `AI_MODE=operator-local`, `AI_ELIGIBILITY_VERIFIED=1`, and an exact loopback `APP_ORIGIN`, such as `http://127.0.0.1:3000`. Set `GEMINI_API_KEY` and a randomly generated `AI_LOCAL_OPERATOR_TOKEN` of at least 32 characters. Set positive `AI_OPERATOR_PER_MINUTE`, `AI_PROJECT_PER_MINUTE`, and `AI_PROJECT_PER_DAY` limits within the verified quota, in that order of size.

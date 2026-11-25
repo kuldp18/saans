@@ -18,6 +18,18 @@ it("allows the configured origin or an exact loopback Host for local no-key use"
   expect(allowsPlanOrigin(request("{}"), undefined)).toBe(false);
 });
 
+it("allows local aliases only on the configured port and matching request Host", () => {
+  const origin = "http://127.0.0.1:3000";
+  const check = (browserOrigin: string, host: string) =>
+    allowsPlanOrigin(request("{}", { origin: browserOrigin, host }), origin);
+  expect(check("http://localhost:3000", "localhost:3000")).toBe(true);
+  expect(check("http://[::1]:3000", "[::1]:3000")).toBe(true);
+  expect(check("http://localhost:3001", "localhost:3001")).toBe(false);
+  expect(check("http://localhost:3000", "127.0.0.1:3000")).toBe(false);
+  expect(check("http://127.0.0.1:3000", "saans.example")).toBe(false);
+  expect(check("http://example.com:3000", "example.com:3000")).toBe(false);
+});
+
 it("validates a demo request and rejects invalid mode, forged flags, and profile fields", async () => {
   expect(await readPlanRequest(request(JSON.stringify(payload)))).toEqual({
     ok: true, city: "delhi", mode: "demo", profile: delhiGoldenInput,

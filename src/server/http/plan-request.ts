@@ -4,6 +4,7 @@ import { parsePlanInput } from "../../domain/plan/input";
 import { BodyTooLarge, readBoundedJson } from "./bounded-json";
 
 const BODY_LIMIT = 4096;
+const loopbackHosts = new Set(["localhost", "127.0.0.1", "[::1]"]);
 const envelope = z.strictObject({
   city: locationIdSchema,
   mode: z.enum(["demo", "live"]),
@@ -13,19 +14,17 @@ const envelope = z.strictObject({
 export function allowsPlanOrigin(request: Request, configured: string | undefined) {
   const origin = request.headers.get("origin");
   if (!origin) return false;
-  if (configured) {
-    try {
-      const expected = new URL(configured);
-      return ["http:", "https:"].includes(expected.protocol) && expected.origin === origin;
-    } catch {
-      return false;
-    }
-  }
   try {
     const local = new URL(origin);
+    const expected = configured ? new URL(configured) : null;
+    if (expected && !["http:", "https:"].includes(expected.protocol)) return false;
+    if (expected && (expected.protocol !== "http:" || !loopbackHosts.has(expected.hostname))) {
+      return expected.origin === origin;
+    }
     // Next may reconstruct request.url from the server bind address.
-    return local.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(local.hostname)
-      && origin === local.origin && local.host === request.headers.get("host");
+    return local.protocol === "http:" && loopbackHosts.has(local.hostname)
+      && origin === local.origin && local.host === request.headers.get("host")
+      && (!expected || (expected.origin === configured && expected.port === local.port));
   } catch {
     return false;
   }

@@ -17,6 +17,11 @@ import { Card, SelectField, Status } from "./ui";
 type ActivityId = Activity["activityId"];
 const personas = ["household", "community"] as const;
 const activityIds = ["school-pickup", "errand", "outdoor-group-activity"] as const;
+const exampleTimes = {
+  "school-pickup": { start: "15:00", end: "15:30", earliest: "15:00", latest: "15:30" },
+  errand: { start: "11:00", end: "12:00", earliest: "09:00", latest: "17:00" },
+  "outdoor-group-activity": { start: "10:00", end: "11:00", earliest: "09:00", latest: "16:00" },
+} satisfies Record<ActivityId, { start: string; end: string; earliest: string; latest: string }>;
 const commitments = [
   { label: "Fixed", value: "fixed" },
   { label: "Flexible", value: "flexible" },
@@ -37,12 +42,12 @@ function InputField({ label, error, id, ...props }: InputHTMLAttributes<HTMLInpu
 
 function ActivityFields({ id, sample, active, errors }: { id: ActivityId; sample: boolean; active: boolean; errors: FormErrors }) {
   const original = sample ? delhiGoldenInput.activities.find(({ activityId }) => activityId === id) : undefined;
-  const optional = id === "outdoor-group-activity";
+  const example = exampleTimes[id];
   const [flexibility, setFlexibility] = useState(original?.flexibility ?? (id === "school-pickup" ? "fixed" : "flexible"));
-  const start = original?.start.slice(11, 16) ?? (sample && optional ? "08:30" : "");
-  const end = original?.end.slice(11, 16) ?? (sample && optional ? "09:30" : "");
-  const earliest = original?.flexibility === "flexible" ? original.earliestStart.slice(11, 16) : start;
-  const latest = original?.flexibility === "flexible" ? original.latestEnd.slice(11, 16) : end;
+  const start = original?.start.slice(11, 16) ?? (sample ? "08:30" : example.start);
+  const end = original?.end.slice(11, 16) ?? (sample ? "09:30" : example.end);
+  const earliest = original?.flexibility === "flexible" ? original.earliestStart.slice(11, 16) : sample ? start : example.earliest;
+  const latest = original?.flexibility === "flexible" ? original.latestEnd.slice(11, 16) : sample ? end : example.latest;
   return (
     <fieldset className="activity" hidden={!active} disabled={!active}>
       <legend>{activityNames[id]}</legend>
@@ -83,9 +88,9 @@ function TravelFields({ sample, errors }: { sample: boolean; errors: FormErrors 
           <p className="text-sm text-muted">Count whole journeys in kilometres (km), including any private-car connection.</p>
           <div className="time-fields grid gap-3">
             <InputField id="travel-before" type="number" min={0} max={500} step="any" inputMode="decimal"
-              label="Current private-car distance (km)" defaultValue={sample ? delhiGoldenInput.travel?.baseline[0].km : undefined} error={errors["travel-before"]} />
+              label="Current private-car distance (km)" placeholder={sample ? undefined : "e.g. 8"} defaultValue={sample ? delhiGoldenInput.travel?.baseline[0].km : undefined} error={errors["travel-before"]} />
             <InputField id="travel-after" type="number" min={0} max={500} step="any" inputMode="decimal"
-              label="Proposed private-car distance (km)" defaultValue={sample ? delhiGoldenInput.travel?.proposed[0].km : undefined} error={errors["travel-after"]} />
+              label="Proposed private-car distance (km)" placeholder={sample ? undefined : "e.g. 5"} defaultValue={sample ? delhiGoldenInput.travel?.proposed[0].km : undefined} error={errors["travel-after"]} />
           </div>
         </div>
       </div>
@@ -150,9 +155,13 @@ export function PlannerForm({ city, mode, initialAir, date }: {
         signal: AbortSignal.timeout(12_000),
       });
       if (!response.ok) {
-        showErrors({ "form-error": response.status === 400
-          ? "The plan could not use these choices. Review your routine and try again."
-          : "Plan generation is unavailable. Your entries are still here. Try again." });
+        const errors: Record<number, string> = {
+          400: "The plan could not use these choices. Review your routine and try again.",
+          403: "This address is not allowed to submit plans. Open Saans at its configured address.",
+          404: "This city could not be found. Search for it again or choose another city.",
+          429: "Too many plan requests. Wait a moment before trying again.",
+        };
+        showErrors({ "form-error": errors[response.status] ?? "Plan generation is unavailable. Your entries are still here. Try again." });
         return;
       }
       const plan: PlanResult = await response.json();
@@ -194,7 +203,9 @@ export function PlannerForm({ city, mode, initialAir, date }: {
         <div className="planner-fields" hidden={!!result}>
           <h2>Your routine</h2>
           <Card>
-            <form className="planner-form" aria-label="Daily routine" action="/api/plan" method="post" onSubmit={submit} noValidate>
+            <form className="planner-form" aria-label="Daily routine" aria-describedby={sample ? undefined : "routine-examples"}
+              action="/api/plan" method="post" onSubmit={submit} noValidate>
+              {!sample && <p id="routine-examples" className="text-sm text-muted">The activity times are examples. Edit them to match your schedule, or use them to try the planner.</p>}
               {Object.keys(errors).length > 0 && (
                 <section className="error-summary" aria-labelledby="error-heading" tabIndex={-1} ref={summary}>
                   <h3 id="error-heading">Check your entries</h3>
