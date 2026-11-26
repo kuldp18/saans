@@ -46,10 +46,10 @@ describe("Open-Meteo adapter", () => {
     (payload: ReturnType<typeof upstream>) => { payload.hourly_units.pm2_5 = "mg/m³"; },
     (payload: ReturnType<typeof upstream>) => { payload.hourly_units.us_aqi = "European AQI"; },
     (payload: ReturnType<typeof upstream>) => { payload.utc_offset_seconds = 19800; },
-    (payload: ReturnType<typeof upstream>) => { payload.hourly.time[1] = payload.hourly.time[0]; },
+    (payload: ReturnType<typeof upstream>) => { payload.hourly.time.copyWithin(1, 0, 1); },
     (payload: ReturnType<typeof upstream>) => { payload.hourly.time.reverse(); },
     (payload: ReturnType<typeof upstream>) => { payload.hourly.time[0] = "2026-02-30T02:00"; },
-    (payload: ReturnType<typeof upstream>) => { payload.hourly.time[0] += "+05:30"; },
+    (payload: ReturnType<typeof upstream>) => { payload.hourly.time[0] = "2026-01-15T02:00+05:30"; },
   ])("rejects conflicting or malformed response metadata (%#)", (mutate) => {
     const payload = upstream();
     mutate(payload);
@@ -60,7 +60,7 @@ describe("Open-Meteo adapter", () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(" ".repeat(65_537)));
     const loadLive = createOpenMeteo({ fetcher, now: () => start });
     expect(await loadLive("noida")).toBeNull();
-    const [url, init] = fetcher.mock.calls[0];
+    const [url, init] = fetcher.mock.calls[0] ?? [];
     const requestUrl = new URL(String(url));
     expect(requestUrl.origin + requestUrl.pathname).toBe("https://air-quality-api.open-meteo.com/v1/air-quality");
     expect(Object.fromEntries(requestUrl.searchParams)).toMatchObject({
@@ -141,6 +141,25 @@ describe("air cache", () => {
     expect((await getAir(city, "live")).mode).toBe("live-model");
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
+
+  it("refreshes an otherwise fresh cache when the horizon enters an uncovered hour", async () => {
+    let time = start;
+    const now = () => time;
+    const exact = upstream();
+    for (const values of Object.values(exact.hourly)) values.length = 12;
+    const fetcher = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(Response.json(exact))
+      .mockResolvedValueOnce(Response.json(upstream()));
+    const getAir = createAirService({ now, loadLive: createOpenMeteo({ fetcher, now }) });
+    const initial = await getAir(city, "live");
+    expect(initial.hourly).toHaveLength(12);
+    expect(await getAir(city, "live")).toBe(initial);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+
+    time++;
+    expect((await getAir(city, "live")).hourly).toHaveLength(16);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe("environment-configured live air", () => {
@@ -167,7 +186,7 @@ describe("environment-configured live air", () => {
     expect(fetcher).not.toHaveBeenCalled();
     const getAir = createAirRuntime({ ...env, OPEN_METEO_API_KEY: "synthetic-key" }, opts);
     expect((await getAir(city, "live")).mode).toBe("live-model");
-    const url = new URL(String(fetcher.mock.calls[0][0]));
+    const url = new URL(String(fetcher.mock.calls[0]?.[0]));
     expect(url.hostname).toBe("customer-air-quality-api.open-meteo.com");
     expect(url.searchParams.get("apikey")).toBe("synthetic-key");
   });

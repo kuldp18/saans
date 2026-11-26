@@ -40,7 +40,25 @@ it("shares direct ID lookups and excludes mismatched and unconfigured locations"
   const reads = await Promise.all([getAir("geo-42", "live"), getAir("geo-42", "live")]);
   expect(reads.every((air) => air.mode === "unavailable" && !air.location)).toBe(true);
   expect(fetcher).toHaveBeenCalledTimes(1);
-  expect(String(fetcher.mock.calls[0][0])).toBe("https://geocoding-api.open-meteo.com/v1/get?id=42");
+  expect(String(fetcher.mock.calls[0]?.[0])).toBe("https://geocoding-api.open-meteo.com/v1/get?id=42");
   const blocked = createAirRuntime({ NODE_ENV: "test", AIR_LIVE_ENABLED: "1", APP_ORIGIN: "https://example.com" }, { fetcher });
   expect(blocked.search).toBeUndefined();
+});
+
+it("shares concurrent city searches and fetches a new result after the search TTL", async () => {
+  const now = vi.fn(() => 0);
+  const fetcher = vi.fn<typeof fetch>().mockImplementation(async () => Response.json({ results: [paris] }));
+  const getAir = createAirRuntime({ NODE_ENV: "test", AIR_LIVE_ENABLED: "1", APP_ORIGIN: "http://localhost:3000" }, { fetcher, now });
+  const search = getAir.search;
+  if (!search) throw new Error("Expected configured city search");
+
+  const [first, concurrent] = await Promise.all([search("Paris"), search("PARIS")]);
+  expect(first?.map(({ id }) => id)).toEqual(["geo-2988507"]);
+  expect(concurrent).toBe(first);
+  now.mockReturnValue(5 * 60_000 - 1);
+  expect(await search("paris")).toBe(first);
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  now.mockReturnValue(5 * 60_000);
+  expect(await search("Paris")).toEqual(first);
+  expect(fetcher).toHaveBeenCalledTimes(2);
 });

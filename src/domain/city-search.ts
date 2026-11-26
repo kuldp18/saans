@@ -11,7 +11,7 @@ export function matchCity(text: string): CityId | undefined {
   const exact = names.find(([name]) => name === query)?.[1] ?? aliases.get(query);
   if (exact) return exact;
   const matches = names.filter(([name]) => name.startsWith(query));
-  return matches.length === 1 ? matches[0][1] : undefined;
+  return matches.length === 1 ? matches[0]?.[1] : undefined;
 }
 
 const radians = Math.PI / 180;

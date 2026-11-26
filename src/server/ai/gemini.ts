@@ -15,16 +15,16 @@ const prompt = [
 
 const responseSchema = z.object({
   promptFeedback: z.object({ blockReason: z.string().optional() }).optional(),
-  candidates: z.array(z.object({
+  candidates: z.tuple([z.object({
     finishReason: z.literal("STOP"),
     content: z.object({
-      parts: z.array(z.strictObject({
+      parts: z.tuple([z.strictObject({
         text: z.string().min(1).max(2048),
         thought: z.literal(false).optional(),
         thoughtSignature: z.string().optional(),
-      })).length(1),
+      })]),
     }),
-  })).length(1),
+  })]),
 });
 
 export function createGeminiProvider({ apiKey, model, fetcher }: {

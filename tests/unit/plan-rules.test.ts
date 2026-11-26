@@ -62,7 +62,7 @@ describe("air snapshot and impact", () => {
 describe("deterministic action eligibility", () => {
   it("reproduces the golden household plan from the versioned sample anchor", () => {
     const plan = buildRulesPlan(delhiGoldenInput, delhiSample, Date.parse("2030-01-01T00:00:00Z"));
-    expect(plan.actions[0].id).toBe("check-local-advisory");
+    expect(plan.actions[0]?.id).toBe("check-local-advisory");
     expect(plan.actions.filter(({ activityId }) => activityId === "school-pickup")).toEqual([
       { id: "keep-commitment", sourceId: "CPCB-INDIA", activityId: "school-pickup", reason: "fixed" },
     ]);
@@ -91,7 +91,7 @@ describe("deterministic action eligibility", () => {
     const profile: PlanInput = { ...delhiGoldenInput, activities: [fixedOutdoor], cautious };
     const plan = buildRulesPlan(profile, demoWithAqi(aqi), anchor);
     expect(plan.actions.find(({ activityId }) => activityId === fixedOutdoor.activityId)?.id).toBe(id);
-    expect(plan.actions[0].id === "check-local-advisory").toBe(aqi === 201);
+    expect(plan.actions[0]?.id === "check-local-advisory").toBe(aqi === 201);
   });
 
   it("uses the peak even when one overlapping AQI value is missing", () => {

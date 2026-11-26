@@ -1,15 +1,35 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { cities, cityIdSchema, displayPlace, locationQuerySchema, placeSchema, type Place } from "@/catalog/cities";
+import { cities, cityIdSchema, displayPlace, locationQuerySchema, placeSchema, type CityId, type Place } from "@/catalog/cities";
 import { matchCity, nearestSupportedCity } from "@/domain/city-search";
 import { z } from "zod";
 
 const searchResponse = z.object({ locations: z.array(placeSchema).max(12) });
+type DeviceLocation =
+  | { status: "idle" | "locating" | "unavailable" | "no-match" }
+  | { status: "found"; city: CityId };
+
+function describeLocation(location: DeviceLocation) {
+  switch (location.status) {
+    case "found": return `Nearest supported city: ${cities[location.city].name}.`;
+    case "locating": return "Finding your nearest supported city.";
+    case "unavailable": return "Location is unavailable. Search for a city.";
+    case "no-match": return "Couldn’t find a supported city near you. Search for a city.";
+    case "idle": return "";
+  }
+}
+
+function describeSearch(results: Place[] | null | undefined, hasCity: boolean) {
+  if (results?.length) return `${results.length} city matches.`;
+  if (hasCity) return "";
+  if (results === null) return "Worldwide search is unavailable. Try again or open the Delhi sample.";
+  return results ? "No matching cities." : "Searching for cities.";
+}
 
 export function CityPicker() {
   const [query, setQuery] = useState("");
-  const [locationStatus, setLocationStatus] = useState("");
+  const [deviceLocation, setDeviceLocation] = useState<DeviceLocation>({ status: "idle" });
   const [search, setSearch] = useState<{ query: string; results: Place[] | null; }>();
   const [selected, setSelected] = useState<Place>();
   const field = useRef<HTMLInputElement>(null);
@@ -24,15 +44,16 @@ export function CityPicker() {
         if (request !== revision.current) return;
         const city = nearestSupportedCity(coords.latitude, coords.longitude, coords.accuracy);
         if (!city) {
-          setLocationStatus("Couldn’t find a supported city near you. Search for a city.");
+          setDeviceLocation({ status: "no-match" });
           return;
         }
         field.current?.setCustomValidity("");
+        setSelected(undefined);
         setQuery(cities[city].name);
-        setLocationStatus(`Nearest supported city: ${cities[city].name}.`);
+        setDeviceLocation({ status: "found", city });
       },
       () => {
-        if (request === revision.current) setLocationStatus("Location is unavailable. Search for a city.");
+        if (request === revision.current) setDeviceLocation({ status: "unavailable" });
       },
       { enableHighAccuracy: false, timeout: 5_000, maximumAge: 300_000 },
     );
@@ -46,9 +67,9 @@ export function CityPicker() {
   const liveQuery = locationQuerySchema.safeParse(query);
   const searchTerm = liveQuery.success ? liveQuery.data : "";
   const results = search?.query === searchTerm ? search.results : undefined;
-  const selectedId = selected && displayPlace(selected) === query ? selected.id : undefined;
-  const city = selectedId ?? matchCity(query);
-  const shouldSearch = !!searchTerm && !selectedId && !locationStatus.startsWith("Nearest supported city:");
+  const city = selected?.id ?? matchCity(query);
+  const shouldSearch = !!searchTerm && !selected && deviceLocation.status !== "found";
+  const searchStatus = selected ? `Selected ${query}.` : shouldSearch ? describeSearch(results, !!city) : "";
   useEffect(() => {
     if (!shouldSearch) return;
     const controller = new AbortController();
@@ -79,11 +100,9 @@ export function CityPicker() {
           value={query}
           onChange={(event) => {
             invalidateLocation();
-            const text = event.target.value;
-            const place = results?.find((item) => displayPlace(item) === text);
-            setSelected(place);
-            setQuery(text);
-            setLocationStatus("");
+            setSelected(undefined);
+            setQuery(event.target.value);
+            setDeviceLocation({ status: "idle" });
           }}
         />
         <input type="hidden" name="city" value={city ?? ""} />
@@ -93,30 +112,28 @@ export function CityPicker() {
         <p id="city-search-help" className="mb-0 text-sm font-normal text-muted">
           Enter a city name, then choose a match by region and country.
         </p>
-        {shouldSearch && !selectedId && results && results.length > 0 && (
+        {shouldSearch && !!results?.length && (
           <ul aria-label="City search results" className="my-2 grid list-none gap-2 p-0">
             {results.map((place) => (
               <li key={place.id}><button type="button" className="action action-secondary" onClick={() => {
+                invalidateLocation();
                 setSelected(place);
                 setQuery(displayPlace(place));
+                setDeviceLocation({ status: "idle" });
                 field.current?.focus();
               }}>{displayPlace(place)}</button></li>
             ))}
           </ul>
         )}
-        <p role="status" className="mb-0 text-sm text-muted">{selectedId ? `Selected ${query}.` : shouldSearch
-          ? results === null ? city ? "" : "Worldwide search is unavailable. Try again or open the Delhi sample."
-            : results ? results.length ? `${results.length} city matches.` : city ? "" : "No matching cities."
-              : city ? "" : "Searching for cities."
-          : ""}</p>
+        <p role="status" className="mb-0 text-sm text-muted">{searchStatus}</p>
       </div>
       <button type="button" className="action action-secondary mt-3" onClick={() => {
         if (navigator.geolocation) {
-          setLocationStatus("Finding your nearest supported city.");
+          setDeviceLocation({ status: "locating" });
           locate();
-        } else setLocationStatus("Location is unavailable. Search for a city.");
+        } else setDeviceLocation({ status: "unavailable" });
       }}>Use my location</button>
-      <p role="status" className="mb-0 mt-1 text-sm text-muted">{locationStatus}</p>
+      <p role="status" className="mb-0 mt-1 text-sm text-muted">{describeLocation(deviceLocation)}</p>
     </>
   );
 }

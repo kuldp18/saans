@@ -37,7 +37,14 @@ function request(body = input, headerOrigin = origin) {
 
 function ranked(scenario: RankingScenario) {
   const [first, second, ...rest] = scenario.candidates;
-  return { order: [second, first, ...rest].map(({ id, reasons }) => [id, reasons.at(-1)!]) };
+  if (!first || !second) throw new Error("Expected two rankable candidates");
+  const pair = ({ id, reasons }: RankingScenario["candidates"][number]): [string, string] => {
+    const reason = reasons.at(-1);
+    if (!reason) throw new Error("Expected an approved reason");
+    return [id, reason];
+  };
+  const order: [[string, string], [string, string], ...[string, string][]] = [pair(second), pair(first), ...rest.map(pair)];
+  return { order };
 }
 
 function handler(rank: ReturnType<typeof createAiRanker>, gate = () => 0) {
@@ -55,15 +62,16 @@ it("reorders visible eligible cards and pairs a local reason while preserving ca
   expect(result.plan.method).toBe("ai-ranked");
   expect(result.air).toEqual(air);
   expect(result.plan.actions.map(({ id }) => id)).toEqual([
-    rules.actions[0].id, rules.actions[2].id, rules.actions[1].id, ...rules.actions.slice(3).map(({ id }) => id),
+    "check-local-advisory", rules.actions[2]?.id, rules.actions[1]?.id, ...rules.actions.slice(3).map(({ id }) => id),
   ]);
   expect(result.plan.actions[0]).toEqual(rules.actions[0]);
-  expect(result.plan.actions[1].approvedReason).toBe("alternate");
+  expect(result.plan.actions[1]?.approvedReason).toBe("alternate");
   for (const { approvedReason, ...card } of result.plan.actions) {
     expect(rules.actions).toContainEqual(card);
     if (approvedReason) expect(approvedReason).toBe("alternate");
   }
-  const [scenario] = provider.mock.calls[0];
+  const [scenario] = provider.mock.calls[0] ?? [];
+  if (!scenario) throw new Error("Expected a provider call");
   expect(scenario.severity).toBe("Very unhealthy");
   expect(Object.keys(scenario)).toEqual(["severity", "candidates"]);
   expect(JSON.stringify(scenario)).not.toMatch(/delhi|2026|08:30|no-purchases|car-1|school-pickup|filter|cautious|vehicle-km/i);
@@ -126,7 +134,7 @@ it("aborts a stalled Gemini fetch and never retries it", async () => {
   await vi.advanceTimersByTimeAsync(40);
   expect(await pending).toEqual({ plan: rules, aiUnavailable: true });
   expect(fetcher).toHaveBeenCalledTimes(1);
-  const [url, init] = fetcher.mock.calls[0];
+  const [url, init] = fetcher.mock.calls[0] ?? [];
   expect(url).toBe("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent");
   expect(init?.signal?.aborted).toBe(true);
   expect(init?.redirect).toBe("error");
@@ -144,7 +152,7 @@ it("aborts a stalled quota before the provider can be called", async () => {
   const pending = createAiRanker({ authorize: authorization, reserve: quota, provider, limitMs: 40 })(request(), "live", rules, air);
   await vi.advanceTimersByTimeAsync(100);
   expect(await pending).toEqual({ plan: rules, aiUnavailable: true });
-  expect(quota.mock.calls[0][1].aborted).toBe(true);
+  expect(quota.mock.calls[0]?.[1].aborted).toBe(true);
   expect(provider).not.toHaveBeenCalled();
 });
 
@@ -170,7 +178,7 @@ it("accepts one bounded completed JSON response from a configurable Flash-Lite e
   const provider = createGeminiProvider({ apiKey: "test-key", model: "gemini-3.1-flash-lite-preview", fetcher });
   expect(await createAiRanker({ authorize: authorization, reserve, provider })(request(), "live", rules, air))
     .toMatchObject({ plan: { method: "ai-ranked" } });
-  expect(fetcher.mock.calls[0][0]).toBe("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent");
+  expect(fetcher.mock.calls[0]?.[0]).toBe("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent");
   expect(createGeminiProvider({ apiKey: "test", model: "../other", fetcher })).toBeUndefined();
 });
 

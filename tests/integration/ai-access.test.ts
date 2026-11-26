@@ -76,7 +76,7 @@ it("uses one shared atomic reservation for the project minute, UTC day and pseud
   expect(await budget(operator, signal)).toBe(false);
   expect(await budget(claims.sub, signal)).toBe(false);
   expect(fetcher).toHaveBeenCalledTimes(3);
-  const [endpoint, options] = fetcher.mock.calls[0];
+  const [endpoint, options] = fetcher.mock.calls[0] ?? [];
   expect(String(endpoint)).toBe("https://limit-example.upstash.io/");
   expect(options).toMatchObject({ redirect: "error", method: "POST", signal });
   const command = JSON.parse(String(options?.body));

@@ -88,9 +88,9 @@ function TravelFields({ sample, errors }: { sample: boolean; errors: FormErrors 
           <p className="text-sm text-muted">Count whole journeys in kilometres (km), including any private-car connection.</p>
           <div className="time-fields grid gap-3">
             <InputField id="travel-before" type="number" min={0} max={500} step="any" inputMode="decimal"
-              label="Current private-car distance (km)" placeholder={sample ? undefined : "e.g. 8"} defaultValue={sample ? delhiGoldenInput.travel?.baseline[0].km : undefined} error={errors["travel-before"]} />
+              label="Current private-car distance (km)" placeholder={sample ? undefined : "e.g. 8"} defaultValue={sample ? delhiGoldenInput.travel?.baseline[0]?.km : undefined} error={errors["travel-before"]} />
             <InputField id="travel-after" type="number" min={0} max={500} step="any" inputMode="decimal"
-              label="Proposed private-car distance (km)" placeholder={sample ? undefined : "e.g. 5"} defaultValue={sample ? delhiGoldenInput.travel?.proposed[0].km : undefined} error={errors["travel-after"]} />
+              label="Proposed private-car distance (km)" placeholder={sample ? undefined : "e.g. 5"} defaultValue={sample ? delhiGoldenInput.travel?.proposed[0]?.km : undefined} error={errors["travel-after"]} />
           </div>
         </div>
       </div>

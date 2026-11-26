@@ -6,7 +6,8 @@ export type WindowStats = { pm25UgM3: number | null; maxUsAqi: number | null; aq
 
 export function createWindowReader(snapshot: AirSnapshot) {
   const bins = new Map(snapshot.hourly.map((hour) => [Date.parse(hour.validAt), hour]));
-  const phase = snapshot.hourly.length ? Date.parse(snapshot.hourly[0].validAt) % HOUR_MS : 0;
+  const firstHour = snapshot.hourly[0];
+  const phase = firstHour ? Date.parse(firstHour.validAt) % HOUR_MS : 0;
   return ({ start, end }: Window): WindowStats | null => {
     if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || end - start > 2 * HOUR_MS) return null;
     let pm25UgM3: number | null = 0;

@@ -43,8 +43,9 @@ export function createHostedOperatorAccess({
   return (request: Request) => {
     if (request.headers.get("origin") !== origin.origin) return null;
     const header = request.headers.get("x-saans-operator-assertion") ?? "";
-    if (header.length > 1024 || !/^[\w-]+\.[\w-]{43}$/.test(header)) return null;
-    const [payload, mac] = header.split(".");
+    if (header.length > 1024) return null;
+    const [, payload, mac] = /^([\w-]+)\.([\w-]{43})$/.exec(header) ?? [];
+    if (!payload || !mac) return null;
     const expected = createHmac("sha256", secret).update(payload).digest("base64url");
     if (!equal(mac, expected)) return null;
     try {

@@ -28,9 +28,12 @@ return 1
 `;
 
 export function parseBudgetCaps(minuteCap: string | undefined, dayCap: string | undefined, operatorCap: string | undefined): BudgetCaps | null {
-  if (![minuteCap, dayCap, operatorCap].every((value) => /^[1-9]\d{0,5}$/.test(value ?? ""))) return null;
-  const [projectMinute, projectDay, operatorMinute] = [minuteCap, dayCap, operatorCap].map(Number);
-  return operatorMinute <= projectMinute && projectMinute <= projectDay
+  const cap = (value: string | undefined) => value && /^[1-9]\d{0,5}$/.test(value) ? Number(value) : null;
+  const projectMinute = cap(minuteCap);
+  const projectDay = cap(dayCap);
+  const operatorMinute = cap(operatorCap);
+  return projectMinute !== null && projectDay !== null && operatorMinute !== null &&
+    operatorMinute <= projectMinute && projectMinute <= projectDay
     ? { projectMinute, projectDay, operatorMinute } : null;
 }
 

@@ -35,7 +35,8 @@ function rejected(status: number, code: string) {
 }
 
 export async function readPlanRequest(request: Request) {
-  if (request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "application/json") {
+  const [mediaType] = request.headers.get("content-type")?.split(";", 1) ?? [];
+  if (mediaType?.trim().toLowerCase() !== "application/json") {
     return rejected(415, "json_required");
   }
   if (Number(request.headers.get("content-length")) > BODY_LIMIT) return rejected(413, "body_too_large");

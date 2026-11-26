@@ -16,7 +16,9 @@ const cityKey = (name: string) => name.normalize("NFC").trim().toLowerCase().rep
 function latestBulletinDate(html: string) {
   let latest = "";
   for (const match of html.matchAll(/displaypdf\.php\?id=([A-Za-z0-9+/=]{12,96})/g)) {
-    const path = Buffer.from(match[1], "base64").toString("utf8");
+    const encoded = match[1];
+    if (!encoded) continue;
+    const path = Buffer.from(encoded, "base64").toString("utf8");
     const date = /^Downloads\/AQI_Bulletin_(\d{8})\.pdf$/.exec(path)?.[1];
     if (date && date > latest) latest = date;
   }
@@ -27,6 +29,7 @@ export function parseCpcbBulletin(text: string, date: string, bulletinUrl: strin
   const header = /^Air Quality Index on ([A-Z][a-z]{2}) (\d{1,2}), (\d{4})\s*@\s*(\d{1,2})(?::([0-5]\d))?\s*(AM|PM)\s*$/m.exec(text);
   if (!header) return null;
   const [, month, day, year, hours, minutes = "00", period] = header;
+  if (!month || !day || !year || !hours || !period) return null;
   const monthIndex = months.indexOf(month) + 1;
   const dayString = day.padStart(2, "0");
   const monthString = String(monthIndex).padStart(2, "0");
@@ -40,10 +43,11 @@ export function parseCpcbBulletin(text: string, date: string, bulletinUrl: strin
 
   for (const line of text.split(/\r?\n/)) {
     const row = /^\s*\d+\s+(.+?)\s+(Good|Satisfactory|Moderate|Very Poor|Poor|Severe)\s+(\d{1,3})\b/i.exec(line);
-    if (!row) continue;
-    const city = cityKey(row[1]);
-    const value = Number(row[3]);
-    if (!city || indiaAqiBand(value)?.toLowerCase() !== row[2].toLowerCase()) continue;
+    const [, name, category, index] = row ?? [];
+    if (!name || !category || !index) continue;
+    const city = cityKey(name);
+    const value = Number(index);
+    if (!city || indiaAqiBand(value)?.toLowerCase() !== category.toLowerCase()) continue;
     if (seen.has(city)) { delete values[city]; continue; }
     seen.add(city);
     const reading = indiaAqiSchema.safeParse({ value, validAt, sourceId: "CPCB-BULLETIN", bulletinUrl });

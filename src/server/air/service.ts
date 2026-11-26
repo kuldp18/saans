@@ -6,6 +6,7 @@ import {
 } from "../../domain/air";
 
 const RETRY_AFTER_FAILURE_MS = 30_000;
+const MAX_CACHED_CITIES = 256;
 type CacheEntry = {
   snapshot?: AirSnapshot;
   retryAt?: number;
@@ -13,13 +14,23 @@ type CacheEntry = {
 };
 
 function coversPlanningHorizon(snapshot: AirSnapshot, now: number): boolean {
-  const first = airHourAt(snapshot, now);
-  if (!first || !airHourAt(snapshot, now + PLANNING_HORIZON_MS - 1)) return false;
-  const bins = new Set(snapshot.hourly.map(({ validAt }) => Date.parse(validAt)));
-  for (let bin = Date.parse(first.validAt); bin < now + PLANNING_HORIZON_MS; bin += HOUR_MS) {
-    if (!bins.has(bin)) return false;
+  const horizonEnd = now + PLANNING_HORIZON_MS;
+  // The normalized live-model bins are sorted and start on UTC hours.
+  let expected = Math.floor(now / HOUR_MS) * HOUR_MS;
+  for (const { validAt } of snapshot.hourly) {
+    const time = Date.parse(validAt);
+    if (time < expected) continue;
+    if (time > expected) return false;
+    expected += HOUR_MS;
+    if (expected >= horizonEnd) return true;
   }
-  return true;
+  return false;
+}
+
+function usableRefresh(snapshot: AirSnapshot | null, cityId: LocationId, now: number): snapshot is AirSnapshot {
+  return snapshot?.cityId === cityId && snapshot.mode === "live-model" && isFreshAir(snapshot, now) &&
+    !!airHourAt(snapshot, now) &&
+    snapshot.hourly.some(({ pm25UgM3, usAqi }) => pm25UgM3 !== null || usAqi !== null);
 }
 
 export function createAirService({ now, loadLive }: {
@@ -32,13 +43,16 @@ export function createAirService({ now, loadLive }: {
     if (!loadLive) return unavailableAir(cityId);
 
     const readAt = now();
-    if (!cache.has(cityId) && cache.size >= 256) {
-      const oldest = [...cache].find(([, entry]) => !entry.pending);
-      if (!oldest) return unavailableAir(cityId);
-      cache.delete(oldest[0]);
+    let entry = cache.get(cityId);
+    if (!entry) {
+      if (cache.size >= MAX_CACHED_CITIES) {
+        const oldest = cache.entries().find(([, candidate]) => !candidate.pending);
+        if (!oldest) return unavailableAir(cityId);
+        cache.delete(oldest[0]);
+      }
+      entry = {};
+      cache.set(cityId, entry);
     }
-    const entry = cache.get(cityId) ?? {};
-    cache.set(cityId, entry);
     if (entry.snapshot && isFreshAir(entry.snapshot, readAt) && coversPlanningHorizon(entry.snapshot, readAt)) {
       return entry.snapshot;
     }
@@ -49,19 +63,17 @@ export function createAirService({ now, loadLive }: {
         .catch(() => null)
         .then((result) => {
           const refreshedAt = now();
-          if (result?.cityId === cityId && result.mode === "live-model" && isFreshAir(result, refreshedAt) &&
-            airHourAt(result, refreshedAt) &&
-            result.hourly.some(({ pm25UgM3, usAqi }) => pm25UgM3 !== null || usAqi !== null)) {
-            if (coversPlanningHorizon(result, refreshedAt)) {
-              entry.snapshot = result;
-              entry.retryAt = undefined;
-            } else {
-              entry.retryAt = refreshedAt + RETRY_AFTER_FAILURE_MS;
-            }
-            return result;
+          if (!usableRefresh(result, cityId, refreshedAt)) {
+            entry.retryAt = refreshedAt + RETRY_AFTER_FAILURE_MS;
+            return null;
           }
-          entry.retryAt = refreshedAt + RETRY_AFTER_FAILURE_MS;
-          return null;
+          if (coversPlanningHorizon(result, refreshedAt)) {
+            entry.snapshot = result;
+            entry.retryAt = undefined;
+          } else {
+            entry.retryAt = refreshedAt + RETRY_AFTER_FAILURE_MS;
+          }
+          return result;
         })
         .finally(() => { entry.pending = undefined; });
     }

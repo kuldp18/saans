@@ -4,7 +4,7 @@ test("serves a fresh production nonce and secure page and API headers", async ({
   const response = await page.goto("/");
   const headers = response!.headers();
   const policy = headers["content-security-policy"];
-  const nonce = policy.match(/'nonce-([^']+)'/)?.[1];
+  const nonce = policy?.match(/'nonce-([^']+)'/)?.[1];
   expect(nonce).toBeTruthy();
   expect(policy).toContain("'strict-dynamic'");
   expect(policy).toContain("frame-ancestors 'none'");
